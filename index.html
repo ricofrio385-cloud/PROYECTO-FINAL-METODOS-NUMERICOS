@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Aplicación web interactiva para el análisis numérico de la carga y descarga de un capacitor en un circuito RC." />
+  <title>RC NumLab | Análisis numérico de un circuito RC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="background-grid" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="Ir al inicio">
+      <span class="brand-mark">RC</span>
+      <span>
+        <strong>RC NumLab</strong>
+        <small>Métodos Numéricos · UNMSM</small>
+      </span>
+    </a>
+    <nav class="nav-links" aria-label="Navegación principal">
+      <a href="#simulador">Simulador</a>
+      <a href="#metodos">Métodos</a>
+      <a href="#resultados">Resultados</a>
+      <a href="#proyecto">Proyecto</a>
+    </nav>
+    <button class="theme-button" id="themeButton" type="button" aria-label="Cambiar tema">☀️</button>
+  </header>
+
+  <main>
+    <section class="hero section" id="inicio">
+      <div class="hero-copy">
+        <div class="eyebrow">UNMSM · FIEE · MÉTODOS NUMÉRICOS 2026-I</div>
+        <h1>Análisis numérico de la <span>carga y descarga</span> de un capacitor</h1>
+        <p>
+          Aplicación interactiva para comparar mediciones experimentales con el modelo de un circuito RC mediante
+          interpolación de Newton, Newton-Raphson, derivación, integración y Runge-Kutta de cuarto orden.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#simulador">Abrir simulador</a>
+          <button class="button ghost" id="loadDemoTop" type="button">Cargar datos del proyecto</button>
+        </div>
+        <div class="hero-badges">
+          <span>100% en el navegador</span>
+          <span>Sin servidor</span>
+          <span>Compatible con GitHub Pages</span>
+        </div>
+      </div>
+
+      <div class="circuit-card" aria-label="Esquema conceptual del circuito RC">
+        <div class="circuit-title">Circuito RC de carga</div>
+        <svg viewBox="0 0 520 260" role="img" aria-label="Fuente, resistencia y capacitor conectados en serie">
+          <defs>
+            <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <path class="wire" d="M90 70 H195 M315 70 H430 V200 H325 M195 200 H90 V70" />
+          <circle class="node" cx="90" cy="70" r="5" />
+          <circle class="node" cx="430" cy="70" r="5" />
+          <path class="resistor" d="M195 70 l15 -18 20 36 20 -36 20 36 20 -36 25 18" />
+          <line class="capacitor" x1="270" y1="165" x2="350" y2="165" />
+          <line class="capacitor" x1="270" y1="190" x2="350" y2="190" />
+          <line class="wire" x1="310" y1="70" x2="310" y2="165" />
+          <line class="wire" x1="310" y1="190" x2="310" y2="200" />
+          <circle class="source" cx="90" cy="135" r="38" />
+          <line class="source-sign" x1="78" y1="122" x2="102" y2="122" />
+          <line class="source-sign" x1="90" y1="110" x2="90" y2="134" />
+          <line class="source-sign" x1="78" y1="151" x2="102" y2="151" />
+          <text class="svg-label" x="232" y="37">R = 10 kΩ</text>
+          <text class="svg-label" x="332" y="148">C = 1000 µF</text>
+          <text class="svg-label" x="33" y="215">Vs = 5 V</text>
+          <text class="voltage-label" x="355" y="185">Vc(t)</text>
+        </svg>
+        <div class="equation">V<sub>C</sub>(t) = V<sub>S</sub>(1 − e<sup>−t/RC</sup>)</div>
+        <div class="signal-line"><span id="signalDot"></span></div>
+      </div>
+    </section>
+
+    <section class="stats section" aria-label="Indicadores principales">
+      <article class="stat-card">
+        <span>Constante de tiempo</span>
+        <strong id="tauStat">10.00 s</strong>
+        <small>τ = R · C</small>
+      </article>
+      <article class="stat-card">
+        <span>Voltaje máximo medido</span>
+        <strong id="maxVoltageStat">4.83 V</strong>
+        <small>Dataset experimental</small>
+      </article>
+      <article class="stat-card">
+        <span>Tiempo calibrado para 4 V</span>
+        <strong id="targetTimeStat">16.09 s</strong>
+        <small>Modelo RC ideal</small>
+      </article>
+      <article class="stat-card accent">
+        <span>Error de interpolación</span>
+        <strong>0.38 %</strong>
+        <small>Resultado del informe</small>
+      </article>
+    </section>
+
+    <section class="section" id="simulador">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">01</span>
+          <h2>Simulador y datos experimentales</h2>
+        </div>
+        <p>Modifica los parámetros, utiliza el conjunto de mediciones o importa tu propio archivo CSV.</p>
+      </div>
+
+      <div class="workspace-grid">
+        <aside class="panel controls-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Parámetros eléctricos</span>
+              <h3>Configuración del circuito</h3>
+            </div>
+            <span class="status-dot" title="Simulador activo"></span>
+          </div>
+
+          <label class="field">
+            <span>Fuente V<sub>S</sub> (V)</span>
+            <input id="sourceVoltage" type="number" value="5" min="0.1" max="100" step="0.1" />
+          </label>
+          <label class="field">
+            <span>Resistencia R (kΩ)</span>
+            <input id="resistance" type="number" value="10" min="0.01" max="1000" step="0.1" />
+          </label>
+          <label class="field">
+            <span>Capacitancia C (µF)</span>
+            <input id="capacitance" type="number" value="1000" min="0.01" max="1000000" step="1" />
+          </label>
+          <label class="field">
+            <span>Modo de análisis</span>
+            <select id="analysisMode">
+              <option value="charge">Carga</option>
+              <option value="discharge">Descarga</option>
+            </select>
+          </label>
+
+          <div class="parameter-result">
+            <span>Constante de tiempo calculada</span>
+            <strong id="tauResult">τ = 10.000 s</strong>
+          </div>
+
+          <div class="control-actions">
+            <button class="button primary full" id="simulateButton" type="button">Ejecutar simulación</button>
+            <button class="button secondary full" id="loadDemoButton" type="button">Restaurar datos del proyecto</button>
+          </div>
+
+          <div class="file-box">
+            <input id="csvInput" type="file" accept=".csv,text/csv" hidden />
+            <button class="file-button" id="openCsvButton" type="button">
+              <span>⬆</span>
+              <span><strong>Importar archivo CSV</strong><small>Columnas: tiempo, voltaje</small></span>
+            </button>
+          </div>
+        </aside>
+
+        <div class="panel chart-panel">
+          <div class="panel-heading chart-heading">
+            <div>
+              <span class="panel-kicker">Voltaje vs. tiempo</span>
+              <h3 id="chartTitle">Curva de carga del capacitor</h3>
+            </div>
+            <div class="legend">
+              <span><i class="legend-dot experimental"></i>Experimental</span>
+              <span><i class="legend-dot theoretical"></i>RK4 / teórico</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <svg id="mainChart" viewBox="0 0 900 430" role="img" aria-label="Gráfica interactiva de voltaje contra tiempo"></svg>
+            <div class="chart-tooltip" id="chartTooltip" hidden></div>
+          </div>
+          <div class="chart-footer">
+            <span id="datasetLabel">Dataset: carga experimental</span>
+            <button class="text-button" id="downloadDataButton" type="button">Descargar CSV ↓</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel data-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="panel-kicker">Adquisición de datos</span>
+            <h3>Tabla de mediciones</h3>
+          </div>
+          <div class="table-actions">
+            <button class="small-button" id="addRowButton" type="button">+ Agregar fila</button>
+            <button class="small-button danger" id="clearRowsButton" type="button">Limpiar</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>N.º</th><th>Tiempo (s)</th><th>Voltaje (V)</th><th>Modelo (V)</th><th>Error (%)</th><th></th></tr>
+            </thead>
+            <tbody id="dataTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="metodos">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">02</span>
+          <h2>Métodos numéricos</h2>
+        </div>
+        <p>Cada módulo utiliza el conjunto de datos activo y muestra el procedimiento numérico principal.</p>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Métodos numéricos">
+        <button class="tab active" data-tab="interpolation" type="button">Interpolación</button>
+        <button class="tab" data-tab="root" type="button">Newton-Raphson</button>
+        <button class="tab" data-tab="derivative" type="button">Derivación</button>
+        <button class="tab" data-tab="integration" type="button">Integración</button>
+        <button class="tab" data-tab="rk4" type="button">RK4</button>
+      </div>
+
+      <div class="method-layout">
+        <div class="panel method-panel tab-content active" id="interpolation">
+          <div class="method-header">
+            <span class="method-number">4.1</span>
+            <div><h3>Interpolación de Newton</h3><p>Estima un voltaje en un instante no tabulado mediante diferencias divididas.</p></div>
+          </div>
+          <div class="method-form">
+            <label class="field"><span>Tiempo a estimar (s)</span><input id="interpTime" type="number" value="25" step="0.1" /></label>
+            <label class="field"><span>Número de puntos</span><select id="interpPoints"><option value="2">2 puntos</option><option value="3" selected>3 puntos</option><option value="4">4 puntos</option><option value="5">5 puntos</option></select></label>
+            <button class="button primary" id="interpButton" type="button">Calcular interpolación</button>
+          </div>
+          <div class="result-card" id="interpResult"><span>Resultado</span><strong>V(25 s) = 4.4133 V</strong><p>Presiona calcular para actualizar el procedimiento con los datos actuales.</p></div>
+        </div>
+
+        <div class="panel method-panel tab-content" id="root">
+          <div class="method-header">
+            <span class="method-number">4.2</span>
+            <div><h3>Newton-Raphson</h3><p>Encuentra el tiempo en que el capacitor alcanza un voltaje objetivo.</p></div>
+          </div>
+          <div class="method-form">
+            <label class="field"><span>Voltaje objetivo (V)</span><input id="targetVoltage" type="number" value="4" min="0" step="0.01" /></label>
+            <label class="field"><span>Valor inicial t₀ (s)</span><input id="initialGuess" type="number" value="15" min="0" step="0.1" /></label>
+            <button class="button primary" id="rootButton" type="button">Buscar instante</button>
+          </div>
+          <div class="result-card" id="rootResult"><span>Resultado</span><strong>t ≈ 17.61 s</strong><p>El informe experimental reporta un valor cercano a 18 s.</p></div>
+        </div>
+
+        <div class="panel method-panel tab-content" id="derivative">
+          <div class="method-header">
+            <span class="method-number">4.3</span>
+            <div><h3>Derivación numérica</h3><p>Calcula la rapidez de cambio dV/dt mediante diferencias finitas.</p></div>
+          </div>
+          <div class="method-form">
+            <label class="field"><span>Tiempo de evaluación (s)</span><input id="derivativeTime" type="number" value="25" step="0.1" /></label>
+            <label class="field"><span>Paso h (s)</span><input id="derivativeStep" type="number" value="1" min="0.001" step="0.1" /></label>
+            <button class="button primary" id="derivativeButton" type="button">Calcular derivada</button>
+          </div>
+          <div class="result-card" id="derivativeResult"><span>Resultado</span><strong>dV/dt = — V/s</strong><p>Se comparará la diferencia central con la derivada del modelo teórico.</p></div>
+        </div>
+
+        <div class="panel method-panel tab-content" id="integration">
+          <div class="method-header">
+            <span class="method-number">4.4</span>
+            <div><h3>Integración numérica</h3><p>Calcula el área bajo V(t) y la energía almacenada en el capacitor.</p></div>
+          </div>
+          <div class="method-form">
+            <label class="field"><span>Tiempo inicial (s)</span><input id="integrationStart" type="number" value="0" min="0" step="0.1" /></label>
+            <label class="field"><span>Tiempo final (s)</span><input id="integrationEnd" type="number" value="56" min="0" step="0.1" /></label>
+            <button class="button primary" id="integrationButton" type="button">Integrar datos</button>
+          </div>
+          <div class="result-card" id="integrationResult"><span>Resultado</span><strong>∫V(t)dt = — V·s</strong><p>Se aplicará la regla del trapecio a los puntos del intervalo.</p></div>
+        </div>
+
+        <div class="panel method-panel tab-content" id="rk4">
+          <div class="method-header">
+            <span class="method-number">4.5</span>
+            <div><h3>Runge-Kutta de cuarto orden</h3><p>Resuelve la ecuación diferencial del circuito RC con un paso configurable.</p></div>
+          </div>
+          <div class="method-form">
+            <label class="field"><span>Tiempo final (s)</span><input id="rkEnd" type="number" value="60" min="0.1" step="1" /></label>
+            <label class="field"><span>Paso h (s)</span><input id="rkStep" type="number" value="0.5" min="0.01" step="0.1" /></label>
+            <button class="button primary" id="rkButton" type="button">Resolver con RK4</button>
+          </div>
+          <div class="result-card" id="rkResult"><span>Resultado</span><strong>Simulación RK4 preparada</strong><p>La curva calculada se mostrará sobre la gráfica principal.</p></div>
+        </div>
+
+        <aside class="formula-panel">
+          <span class="panel-kicker">Modelo matemático</span>
+          <h3 id="formulaTitle">Ecuación de carga</h3>
+          <div class="formula-display" id="formulaDisplay">V<sub>C</sub>(t) = V<sub>S</sub>(1 − e<sup>−t/τ</sup>)</div>
+          <div class="formula-details">
+            <div><span>τ</span><p>Constante de tiempo RC</p></div>
+            <div><span>V<sub>S</sub></span><p>Voltaje de la fuente</p></div>
+            <div><span>V<sub>C</sub></span><p>Voltaje del capacitor</p></div>
+          </div>
+          <div class="algorithm-box" id="algorithmBox">
+            <strong>Newton — diferencias divididas</strong>
+            <code>P(x)=a₀+a₁(x−x₀)+a₂(x−x₀)(x−x₁)+...</code>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="resultados">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">03</span>
+          <h2>Resultados principales del proyecto</h2>
+        </div>
+        <p>Resumen de los valores obtenidos y su interpretación física.</p>
+      </div>
+
+      <div class="results-grid">
+        <article class="result-summary">
+          <span class="summary-tag">Interpolación</span>
+          <h3>Voltaje estimado en 25 s</h3>
+          <div class="summary-value">4.4133 <small>V</small></div>
+          <p>Valor experimental de comparación: 4.4300 V. Error relativo aproximado: 0.38 %.</p>
+          <div class="progress"><span style="width:99.62%"></span></div>
+        </article>
+        <article class="result-summary">
+          <span class="summary-tag">Raíces</span>
+          <h3>Instante para alcanzar 4 V</h3>
+          <div class="summary-value">17.61 <small>s</small></div>
+          <p>La medición experimental se encuentra cerca de 18 s, mostrando una buena aproximación.</p>
+          <div class="progress"><span style="width:97.84%"></span></div>
+        </article>
+        <article class="result-summary">
+          <span class="summary-tag">Circuito</span>
+          <h3>Constante de tiempo</h3>
+          <div class="summary-value">10.00 <small>s</small></div>
+          <p>Con R = 10 kΩ y C = 1000 µF, el capacitor alcanza aproximadamente 63.2 % de su valor final en un τ.</p>
+          <div class="progress"><span style="width:63.2%"></span></div>
+        </article>
+      </div>
+
+      <div class="panel interpretation-panel">
+        <div>
+          <span class="panel-kicker">Interpretación</span>
+          <h3>¿Qué demuestra el análisis?</h3>
+        </div>
+        <p>
+          Los métodos numéricos permiten reconstruir el comportamiento continuo del voltaje a partir de datos discretos,
+          hallar instantes que no aparecen directamente en la tabla y validar el modelo diferencial del circuito. Las
+          diferencias respecto al modelo ideal pueden deberse a la tolerancia de los componentes, el error de medición y
+          la resistencia interna de la fuente y del instrumento.
+        </p>
+      </div>
+    </section>
+
+    <section class="section" id="proyecto">
+      <div class="section-heading">
+        <div>
+          <span class="section-index">04</span>
+          <h2>Información del proyecto</h2>
+        </div>
+        <p>Trabajo final desarrollado para el curso de Métodos Numéricos.</p>
+      </div>
+
+      <div class="project-grid">
+        <div class="panel project-description">
+          <span class="panel-kicker">Objetivo</span>
+          <h3>Análisis y validación experimental</h3>
+          <p>
+            Analizar el comportamiento dinámico de carga y descarga de un capacitor en un circuito RC, comparando
+            mediciones experimentales con aproximaciones matemáticas y soluciones numéricas.
+          </p>
+          <div class="project-tags">
+            <span>Arduino UNO / Multímetro</span><span>R = 10 kΩ</span><span>C = 1000 µF</span><span>Vs = 5 V</span>
+          </div>
+        </div>
+        <div class="panel team-panel">
+          <span class="panel-kicker">Integrantes</span>
+          <h3>Equipo de trabajo</h3>
+          <div class="team-list">
+            <div><span>LC</span><p><strong>Luis Anthony Cancho Paredes</strong><small>Integrante</small></p></div>
+            <div><span>RH</span><p><strong>Richard Hilares Gutierrez</strong><small>Integrante</small></p></div>
+            <div><span>SN</span><p><strong>Sumner Núñez Girón</strong><small>Integrante</small></p></div>
+            <div><span>YN</span><p><strong>Yarol Nolasco</strong><small>Integrante</small></p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-brand"><span class="brand-mark">RC</span><div><strong>RC NumLab</strong><small>Universidad Nacional Mayor de San Marcos · FIEE</small></div></div>
+    <p>Trabajo final de Métodos Numéricos · 2026-I</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="script.js"></script>
+</body>
+</html>
